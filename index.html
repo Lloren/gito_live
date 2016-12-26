@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+	<title>Mooky</title>
+	<meta name="description" content="" />
+	<meta name="author" content="" />
+	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+	<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' gap://ready file:; style-src * 'self' 'unsafe-inline' 'unsafe-eval'; script-src * 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; img-src * data: 'unsafe-inline'">
+
+	<link rel="stylesheet" type="text/css" href="css/font-awesome-4.6.3.min.css" />
+	<link rel="stylesheet" type="text/css" href="css/style.css" />
+
+	<script src="cordova.js"></script>
+	<script>
+		var dev = false;
+		var ads = false;
+		var app = "Mooky";
+		var base_url = "http://mooky.com";
+		var ga_code = "";
+		var admob_code = "";
+		var admob_code_droid = "";
+		var fb_app_id = false;
+
+
+		window.onerror = function(message, url, lineNumber) {
+			if (dev)
+				alert(message+"\r\n"+url+"\r\n"+lineNumber);
+			$.get("http://www.2dio.com/app_js_error.php", {app:app_info(), message:message, url:url, line_number:lineNumber}, function (data){});
+			return false;
+		};
+	</script>
+	<script src="https://maps.googleapis.com/maps/api/js?libraries=geometry,places&v=3.exp&key=AIzaSyAmU39uI5FDOZs8beBgV4v-1Zm1Udlp1eE"></script>
+	<script src="js/jquery-3.1.0.min.js"></script>
+	<script src="js/fastclick.min.js"></script>
+	<script src="js/base.js"></script>
+	<script src="js/main.js"></script>
+</head>
+<body onload="onLoad()" onunload="onunload()">
+
+<div id="templates" style="display: none;">
+	<div data-key="result">
+		<div class="result{{transit_info? transit_info}}{{dlink? confirm_link}}{{ulink? confirm_link}}" data-transit_info_id="##transit_info##" data-price="##price_min##" data-time="##time_sec##"{{ulink? data-ulink="##ulink##"}}{{dlink? data-dlink="##dlink##"}}{{app?  app="##app##"}}>
+			<div class="icon">##icon##</div>
+			<div class="name">##name##</div>
+			<div class="price">##price##{{show_surge:<img src="images/icons3/CUSTOM%20SURGE%20ICON.W+RO.v3.svg">}}</div>
+			<div class="time">##time##</div>
+		</div>
+	</div>
+	<div data-key="overload_result">
+		<div class="result_group">
+			<div class="result result_expander">
+				<div class="icon expander"><img class="img_toggle" src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.NB+RO.v4.svg"> ##icon##</div>
+				<div class="name expander">##name##</div>
+				<div class="price expander">##price##</div>
+				<div class="time expander">##time##</div>
+			</div>
+			<div class="sub_results">##sub_results##</div>
+		</div>
+	</div>
+	<div data-key="transit_step">
+		<div class="transit_step">
+			<div class="num">##num##)</div>
+			<img src="##icon##" style="height: 30px;">
+			<div class="action">##action##</div>
+			<div class="clear"></div>
+		</div>
+	</div>
+</div>
+
+<div id="cont">
+
+	<div id="modal-overlay"></div>
+	<div id="modal">
+		<h1></h1>
+		<p></p>
+		<a id="mbutton1">Ok</a>
+		<a id="mbutton2">Cancel</a>
+	</div>
+
+	<div id="menu-overlay"></div>
+	<div id="menu">
+		<div style="height: 45px;">
+			<img src="images/icons3/MOOKY_LOGOTYPE.B.v1.svg" style="width: 150px; width: 150px; position: absolute; margin: auto; left: 0; right: 0; top: 5px;">
+		</div>
+		<ul>
+			<li><img src="images/icons3/CUSTOM%20APP%20SETTINGS%20ICON.W+RO.v1.svg"> Settings</li>
+			<li><img src="images/icons3/CUSTOM%20RATE%20US%20ICON.W+RO.v1.svg"> Rate Us</li>
+			<li><img src="images/icons3/CUSTOM%20TERMS%20ICON.W+RO.v1.svg"> Terms and conditions</li>
+			<li><img src="images/icons3/CUSTOM%20CONTACT%20US%20ICON.W+RO.v1.svg"> Contact Us</li>
+			<li><img src="images/icons3/CUSTOM%20ABOUT%20US%20ICON.W+RO.v1.svg"> About Us</li>
+			<li><img src="images/icons3/CUSTOM%20VERSION%20ICON.W+RO.v2.svg"> Version <span class="version"></span> <span class="build"></span></li>
+		</ul>
+		<ul class="dev">
+			<li style="background: black;">Dev</li>
+			<li id="clear_cache">Clear cache</li>
+		</ul>
+	</div>
+
+	<div id="header">
+		<div id="menubutton" style="color: black;">
+			<img src="images/icons3/CUSTOM%20MAIN%20MENU%20ICON.NB.v7.svg" style="margin-top: 3px; left: -3px; width: 40px; z-index: 20;" />
+			<!--<i class="fa fa-bars"></i>-->
+		</div>
+	</div>
+
+	<div class="page" style="display: block;">
+		Getting location...
+	</div>
+
+	<div id="transit_info" class="page">
+		<div id="transit_header" style="position: absolute; top: 0; background: white; width: 100%; height: 45px; background: linear-gradient(to bottom, #e8390e 1%,#ff8806 100%); -webkit-linear-gradient(top, #e8390e 1%,#ff8806 100%);">
+			<div style="height: 40px; text-align: center; margin:2px;">
+				<img style="height: 40px;" src="images/MOOKY_LOGOTYPE_WITH%20O%20EYES.png" />
+			</div>
+		</div>
+		<div class="back" data-back="map" style="position: absolute; right:5px; top:-2px; font-size:45px;">
+			<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.NB.v4.svg" style="height: 40px; transform: rotate(90deg)">
+		</div>
+		<div style="top:45px; height:calc(100% - 45px); width:100%; overflow: auto; position: absolute; background: white;">
+			<div id="transit_steps">
+
+			</div>
+		</div>
+	</div>
+
+	<div id="map" class="page">
+		<div id="map_header" style="position: absolute; top: 0; background: white; width: 100%; height: 140px; background: linear-gradient(to bottom, #e8390e 1%,#ff8806 100%); -webkit-linear-gradient(top, #e8390e 1%,#ff8806 100%);">
+			<div style="height: 40px; text-align: center; margin:2px; position: relative; z-index: 20;">
+				<img style="height: 40px;" src="images/MOOKY_LOGOTYPE_WITH%20O%20EYES.png" />
+			</div>
+			<div class="settings_toggle open" style="position: absolute; right:5px; top:2px; z-index: 20;">
+				<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.NB.v4.svg" style="height: 40px;">
+			</div>
+			<div>
+				<div style="position: relative;">
+					<div style="width: 40px; display: inline-block; position: relative;">
+						<div style="width: 30px; margin: 5px auto 0px; position: relative;">
+							<img src="images/icons3/CUSTOM%20DESTINATION%20ICON.WB.v21.svg" style="width: 30px;">
+						</div>
+					</div>
+					<input type="text" id="from_loc" value="" style="background: none; border: none; padding: 4px; width: calc(100% - 80px); color: white; font-size: 16px; position: relative; top: -10px;" placeholder="Origin" />
+					<i class="fa fa-times clearer from_clear"></i>
+				</div>
+				<div style="position: relative;">
+					<div style="width: 40px; display: inline-block;">
+						<div style="width: 30px; margin: 5px auto 0px; position: relative;">
+							<img src="images/icons3/CUSTOM%20ORIGIN%20ICON.BW.v9.svg" style="width: 30px;">
+						</div>
+					</div>
+					<input type="text" id="to_loc" value="" style="background: none; border: none; padding: 4px; width: calc(100% - 80px); color:white; font-size: 16px; position: relative; top: -10px;" placeholder="Destination" />
+					<i class="fa fa-times clearer to_clear"></i>
+				</div>
+			</div>
+			<div style="position: relative; width: 100%;">
+				<img id="search_animation" class="do_lookup" src="images/MOOKY_11-SECONDS.gif" style="position: absolute; width: 70px; right: 0; z-index: 2; left: 0; margin: auto; display: none;">
+			</div>
+			<div class="my_location" style="position: absolute; z-index: 2; top: 145px; left: 5px;">
+				<img src="images/icons3/GPS.RO.v10.svg" style="width: 30px;">
+			</div>
+		</div>
+		<div id="map-canvas" style="top :140px; height: calc(100% - 140px); width: 100%;"></div>
+		<div id="settings_tab" class="hidden">
+			<div id="settings_tab_handle">
+				<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.W+RO.v4.svg" />
+			</div>
+			<div id="settings">
+				<div class="settings_container" data-trigger="one_click">
+					<div class="options">
+						<div class="option" data-key="price">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.PRICE.RO.v11.svg"> One click price
+						</div>
+						<div class="option" data-key="time">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.TIME.RO.v11.svg"> One click time
+						</div>
+					</div>
+				</div>
+				<div class="settings_container" data-key="sort" data-trigger="sort_results">
+					<div class="toggler">
+						<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.NB+RO.v4.svg">
+						<img class="settings_icon" src="">
+						Sort results by <span class="option selected"></span>
+					</div>
+					<div class="options">
+						<div class="option" data-key="price" data-icon="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.PRICE.RO.v11.svg">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.PRICE.RO.v11.svg"> Price
+						</div>
+						<div class="option" data-key="time" data-icon="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.TIME.RO.v11.svg">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20SORT%20LIST%20FORMAT.TIME.RO.v11.svg"> Time
+						</div>
+					</div>
+				</div>
+				<div class="settings_container" data-key="show_external_conf">
+					<div class="toggler">
+						<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.NB+RO.v4.svg">
+						<span class="option selected"></span>
+					</div>
+					<div class="options">
+						<div class="option" data-key="true">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20EXTERNAL%20APP%20ICON.SHOW.W+RO.v4.svg" > Show external link confirmation
+						</div>
+						<div class="option" data-key="false">
+							<img class="settings_icon" src="images/icons3/CUSTOM%20EXTERNAL%20APP%20ICON.HIDE.W+RO.v3.svg" > Hide external link confirmation
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="results_tab">
+			<div id="results_tab_handle" style="display: none;">
+				<img src="images/icons3/CUSTOM%20TOGGLE%20DOWN%20ICON.W+RO.v4.svg" />
+			</div>
+			<div id="results">
+
+			</div>
+		</div>
+	</div>
+
+</div>
+
+</body>
+</html>
