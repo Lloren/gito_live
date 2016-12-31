@@ -21,8 +21,6 @@ var transit_holder = [];
 var results_call = 0;
 var results_to_return = 4;
 
-var one_click_cache = {};
-
 //"https://play.google.com/store/apps/details?id=me.lyft.android";
 var backup_links = {"lyft": {"android": "market://details?id=me.lyft.android", "android_package": "me.lyft.android", "ios": "https://itunes.apple.com/us/app/lyft-taxi-bus-app-alternative/id529379082"}, "uber": {"android": "market://details?id=com.ubercab", "android_package": "com.ubercab", "ios": "https://itunes.apple.com/us/app/lyft-taxi-bus-app-alternative/id368677368"}};
 
@@ -58,7 +56,7 @@ function get_origin_geo(callback){
 		}
 		geocoder.geocode({bounds: map.getBounds(), address: ret}, function (results, status){
 			if (status == "OK"){
-				localStorage.setItem("location:"+ret, JSON.stringify(results[0].geometry.location));
+				//localStorage.setItem("location:"+ret, JSON.stringify(results[0].geometry.location));
 				callback({lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()}, true);
 			} else {
 				callback(false, true);
@@ -82,7 +80,7 @@ function get_destination_geo(callback){
 		}
 		geocoder.geocode({bounds: map.getBounds(), address: ret}, function (results, status){
 			if (status == "OK"){
-				localStorage.setItem("location:"+ret, JSON.stringify(results[0].geometry.location));
+				//localStorage.setItem("location:"+ret, JSON.stringify(results[0].geometry.location));
 				callback({lat: results[0].geometry.location.lat(), lng: results[0].geometry.location.lng()});
 			} else {
 				callback(false);
@@ -118,7 +116,7 @@ function service_google(call_num, start, stop){
 				msec = new Date(route.legs[0].departure_time.value).getTime() - new Date().getTime();
 				var obj = {
 					icon:'<img src="images/icons3/CUSTOM%20BUS%20ICON.RO.v9.svg">',
-					name:"Transit",
+					name:"Walk",
 					price:" ---",
 					time:"N/A"
 				};
@@ -140,6 +138,24 @@ function service_google(call_num, start, stop){
 				});
 				obj.route_id = markers.google_routs.length;
 				obj.transit_info = transit_holder.length;
+				var num = 0;
+				var has_name = false;
+				for (var j=0;j<route.legs[0].steps.length;j++){
+					var step = route.legs[0].steps[j];
+					if (step.transit){
+						num++;
+						if (!has_name){
+							has_name = true;
+							obj.name = step.transit.line.vehicle.name+" "+step.transit.line.short_name;
+							if (step.transit.line.vehicle.name == "Train"){
+								obj.name = step.transit.line.agencies[0].name + " " + step.transit.line.name;
+							}
+						}
+					}
+				}
+				if (num > 1){
+					obj.name += " (+"+(num-1)+")";
+				}
 				transit_holder.push(route.legs[0]);
 				results.push(obj);
 			}
@@ -191,7 +207,7 @@ function service_uber(call_num, start, stop){
 		var results = [];
 		for (var i=0;i<data.length;i++){
 			var price = data[i];
-			var obj = {app: "uber", icon: '<img src="images/uber_'+price.localized_display_name.toLowerCase()+'.svg" onError="this.onerror=null;this.src='+"'images/uber_logo.svg'"+';">', name: price.localized_display_name, price_multiply: price.surge_multiplier, time_sec: price.time_estimate};
+			var obj = {app: "uber", icon: '<img src="images/uber_'+price.localized_display_name.toLowerCase().replace(" ", "_")+'.svg" onError="this.onerror=null;this.src='+"'images/uber_logo.svg'"+';">', name: price.localized_display_name, price_multiply: price.surge_multiplier, time_sec: price.time_estimate};
 			if (price.surge_multiplier > 1)
 				obj.show_surge = true;
 			if (price.estimate[0] == "$"){
@@ -214,8 +230,6 @@ function service_uber(call_num, start, stop){
 	});
 }
 
-//https://api.taxifarefinder.com/businesses?key=<TFF API KEY>&entity_handle=Boston
-//https://api.taxifarefinder.com/entity?key=<TFF API KEY>&location=42.356261,-71.065334
 function service_tff(call_num, start, stop){
 	$.ajax({
 		dataType: "jsonp",
@@ -226,7 +240,31 @@ function service_tff(call_num, start, stop){
 			if (results_call > call_num)
 				return;
 			if (data.status == "OK"){
-				returned_results([{icon: '<img src="images/icons3/CUSTOM%20TAXI%20ICON.RO.v6.svg">', name: "Taxi", price: data.total_fare}]);
+				returned_results([{icon: '<img src="images/icons3/CUSTOM%20TAXI%20ICON.RO.v6.svg">', name: "Taxi", price: data.total_fare, tff:true}]);
+			}
+		}
+	});
+}
+
+function tff_numbers(loc, callback){
+	$.ajax({
+		dataType: "jsonp",
+		cache: true,
+		url: "https://api.taxifarefinder.com/entity?callback=?",
+		data: {key: "bREfab7g3fEp", location: loc.lat+","+loc.lng},
+		success: function (data){
+			if (data.handle){
+				$.ajax({
+					dataType: "jsonp",
+					cache: true,
+					url: "https://api.taxifarefinder.com/businesses?callback=?",
+					data: {key: "bREfab7g3fEp", entity_handle: data.handle},
+					success: function (data){
+						if (data.status == "OK"){
+							callback(data.businesses);
+						}
+					}
+				});
 			}
 		}
 	});
@@ -385,10 +423,9 @@ function sort_results(){
 function geo_location(id, geo){
 	geocoder.geocode({location: geo}, function (results, status){
 		if (status == "OK"){
-			localStorage.setItem("location:"+results[0].formatted_address, JSON.stringify(geo));
-
+			//localStorage.setItem("location:"+results[0].formatted_address, JSON.stringify(geo));
 			console.log("geo results", id, results);
-			$(id).val(results[0].formatted_address);
+			$(id).val(results[0].formatted_address).next().show();
 		}
 	});
 }
@@ -408,6 +445,7 @@ function coded_location(pos, start, trigger){
 				position: start_location,
 				map: map,
 				draggable: true,
+				zIndex: 10,
 				icon: {
 					url:"images/icons3/CUSTOM%20DESTINATION%20ICON.WB.v21.svg",
 					size: new google.maps.Size(10, 10),
@@ -435,7 +473,8 @@ function coded_location(pos, start, trigger){
 				position:stop_location,
 				map:map,
 				draggable:true,
-				icon:{
+				zIndex: 20,
+				icon: {
 					url: "images/icons3/CUSTOM%20ORIGIN%20ICON.BW.v9.svg",
 					size: new google.maps.Size(10, 10),
 					origin: new google.maps.Point(0, 0),
@@ -576,7 +615,7 @@ function load_map(){
 		if (place.geometry){
 			if (from_blur_handel)
 				clearTimeout(from_blur_handel);
-			localStorage.setItem("location:"+place.formatted_address, JSON.stringify(place.geometry.location));
+			//localStorage.setItem("location:"+place.formatted_address, JSON.stringify(place.geometry.location));
 			coded_location({lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}, true);
 			var addr = place.formatted_address;
 			if (place.address_components[0].types != "street_number")
@@ -593,7 +632,7 @@ function load_map(){
 		if (place.geometry){
 			if (from_blur_handel)
 				clearTimeout(to_blur_handel);
-			localStorage.setItem("location:"+place.formatted_address, JSON.stringify(place.geometry.location));
+			//localStorage.setItem("location:"+place.formatted_address, JSON.stringify(place.geometry.location));
 			coded_location({lat: place.geometry.location.lat(), lng: place.geometry.location.lng()}, false);
 			var addr = place.formatted_address;
 			if (place.address_components[0].types != "street_number")
@@ -645,11 +684,13 @@ function get_geo_location(do_load){
 			var marker = new google.maps.Marker({
 				position: my_loc,
 				map: map,
+				zIndex: 30,
 				icon: {
-					url: "images/person.png",
-					size: new google.maps.Size(35, 35),
-					origin: new google.maps.Point(0,0),
-					anchor: new google.maps.Point(17, 17)
+					url: "images/location.svg",
+					size: new google.maps.Size(3000, 3000),
+					origin: new google.maps.Point(0, 0),
+					anchor: new google.maps.Point(11, 11),
+					scaledSize: new google.maps.Size(22, 22)
 				}
 			});
 			markers.my_loc = marker;
@@ -675,6 +716,7 @@ function startup(){
 		$(".dev").hide();
 	if (!has_internet){
 		$("body").html("This app requires internet to function.");
+		start_splash_remove();
 		return;
 	}
 	
@@ -684,7 +726,7 @@ function startup(){
 		get_services();
 		run_services();
 	});
-	
+
 	click_event(".my_location", function (){
 		get_geo_location();
 		$("#from_loc").val("My Location");
@@ -767,39 +809,67 @@ function startup(){
 		var steps_html = [];
 		for (var i=0;i<transit_holder[info_id].steps.length;i++){
 			var step = transit_holder[info_id].steps[i];
-			var icon = "";
-			var action = "";
+			var temp = {num: i+1, time: ""};
 			if (step.transit){
 				var name = step.transit.line.short_name;
-				icon = "images/icons3/CUSTOM%20BUS%20ICON.RO.v9.svg";
+				temp.icon = "images/icons3/CUSTOM%20BUS%20ICON.RO.v9.svg";
 				if (step.transit.line.vehicle.name == "Train"){
 					name = step.transit.line.agencies[0].name + " " + step.transit.line.name;
-					icon = "images/icons3/CUSTOM%20LIGHTRAIL%20ICON.RO.v7.svg";
+					temp.icon = "images/icons3/CUSTOM%20LIGHTRAIL%20ICON.RO.v7.svg";
 				} else if (step.transit.line.vehicle.type == "TRAM"){
-					icon = "images/icons3/CUSTOM%20LIGHTRAIL%20ICON.RO.v7.svg";
+					temp.icon = "images/icons3/CUSTOM%20LIGHTRAIL%20ICON.RO.v7.svg";
 				}
-				action = "Take "+step.transit.line.vehicle.name+" "+name+" to "+step.transit.headsign+" at "+step.transit.departure_time.text;
+				temp.time = step.transit.departure_time.text;
+				temp.action = "Take "+step.transit.line.vehicle.name+" "+name+" to "+step.transit.headsign;
 			} else {
-				icon = "images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg";
-				action = step.instructions;
+				temp.icon = "images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg";
+				temp.action = step.instructions;
 			}
-			steps_html.push(template("transit_step", {"num": i+1, "action": action, "icon": icon}));
+			steps_html.push(template("transit_step", temp));
 		}
 
-		$("#transit_steps").html(steps_html.join(""));
+		$("#transit_details").html(steps_html.join(""));
+		$("#settings_tab").addClass("transit_open");
+		$("#results_tab").addClass("transit_open");
+		$(".settings_toggle").addClass("close_transit");
 
-		$(".page").hide();
-		$("#transit_info").show();
+		$("#transit_details_tab").show();
+
+		$(".transit_step .action").each(function (){
+			var wid = $(window).width();
+			if ($(this).width() > wid - 125){
+				var sec = "";
+				while ($(this).width() > wid - 140){
+					var cont = $(this).html().split(" ");
+					sec = cont.pop() + " " + sec;
+					$(this).html(cont.join(" "));
+				}
+				if (sec != ""){
+					$(this).parents(".transit_step").after(template("transit_step", {sec_line: true, action: sec.trim()}));
+				}
+			}
+		});
+	}, true);
+
+	click_event("#transit_details_tab_handle", function (e){
+		$(".settings_toggle").trigger("click_event");
 	}, true);
 
 	click_event(".settings_toggle", function (e){
-		$(e.currentTarget).toggleClass("open");
-		if ($(e.currentTarget).hasClass("open")){
-			$("#settings_tab").removeClass("open");
-			$("#results_tab").removeClass("settings_open");
+		if ($(e.currentTarget).hasClass("close_transit")){
+			$(e.currentTarget).removeClass("close_transit");
+			$("#settings_tab").removeClass("transit_open");
+			$("#results_tab").removeClass("transit_open");
+			$("#transit_details_tab").hide();
 		} else {
-			$("#settings_tab").addClass("open");
-			$("#results_tab").addClass("settings_open");
+			$(e.currentTarget).toggleClass("open");
+			if ($(e.currentTarget).hasClass("open")){
+				$("#settings_tab").removeClass("open");
+				$("#results_tab").removeClass("settings_open");
+			} else {
+				$("#settings_tab").addClass("open");
+				$("#results_tab").addClass("settings_open");
+			}
 		}
 	});
 
@@ -857,6 +927,19 @@ function startup(){
 		}
 	}, true);
 
+	click_event(".tff_click", function (e){
+		open_modala("loading...");
+		tff_numbers(start_location, function(buss){
+			var html = "";
+			for (var i=0;i<buss.length;i++){
+				var bus = buss[i];
+				html += '<a class="no_close" style="color:white;" href="tel:'+bus.phone+'">'+bus.phone+' '+bus.name+'</a><br />';
+			}
+			close_modala();
+			open_modal({title: "Taxi Companies", content: html, button1: "Close", add_class: "tff_model"});
+		});
+	}, true);
+
 	function update_settings(){
 		$(".settings_container").each(function (){
 			var key = $(this).data("key");
@@ -905,6 +988,8 @@ function startup(){
 		var backs = $(".back:visible");
 		if (backs.length > 0){
 			backs.first().trigger("click_event");
+		} else if ($(".settings_toggle").hasClass("close_transit")){
+			$(".settings_toggle").trigger("click_event");
 		} else if ($(".settings_toggle").hasClass("open")){
 			$(".settings_toggle").trigger("click_event");
 		} else if ($("#menu-overlay:visible")){
@@ -912,12 +997,45 @@ function startup(){
 		}
 	}, false);
 
-	$(document).on("error", function (e){
-		console.log("error", this, e);
-	}).on("load", function (e){
-		console.log("load", this, e);
+	click_event("#menu_contact", function (e){
+		$("#menu-overlay").trigger("click_event");
+		open_modal({title: "Contact us!", content: '<p>Send us a message, we\'d love to hear from you!</p><textarea id="message_text" class="touch_focus" placeholder="Contact us about bugs, requests, feedback, ideas, or just to say hi. :)" style="height: 150px; width:100%;"></textarea><input type="text" id="message_email" class="touch_focus" placeholder="Your email (for replies)" />', callback: function (btn) {
+			if (btn == "Send"){
+				var text = $("#message_text").val();
+				var email = $("#message_email").val();
+				if (text != ""){
+					if (email == ""){
+						if (confirm("Are you sure you want to send without a reply email address? We will be unable to respond to any questions or concerns.")){
+							$.getJSON(base_url+"/ajax/app_contact.php", {app: app_info(), message:text, email:email}, function (data){
+								console.log(data);
+							});
+						} else {
+							reopen_modal();
+							return;
+						}
+					} else {
+						$.getJSON(base_url+"/ajax/app_contact.php", {app: app_info(), message:text, email:email}, function (data){
+							console.log(data);
+						});
+					}
+					open_modal({title: "Sent!", content: "Thank you for your message!", button1: "Close"});
+				}
+			}
+		}, button2: true, button1: "Send", add_class: "contact_form"});
 	});
-	
+
+	click_event("#menu_toc", function (e){
+		$("#menu-overlay").trigger("click_event");
+		$(".page").hide();
+		$("#toc").show();
+	});
+
+	click_event("#menu_about", function (e){
+		$("#menu-overlay").trigger("click_event");
+		$(".page").hide();
+		$("#about").show();
+	});
+
 	var device = device_info();
 	$(".version").html(device.version);
 	if (typeof AppVersion != "undefined"){
@@ -930,6 +1048,7 @@ function startup(){
 }
 
 function one_click(type){
+	track("Results", "one click", type);
 	var sorter = type;
 	var result = $(".result[app]").sort(function (a, b){
 		return $(a).data(sorter) - $(b).data(sorter);
@@ -976,39 +1095,4 @@ function open_intent(intent, fallback){
 			}
 		});
 	}
-	/*
-	startApp.set("uber://?client_id=YOUR_CLIENT_ID&action=setPickup&pickup[latitude]=37.34886929402844&pickup[longitude]=-121.9004339730331&pickup[nickname]=My%20Location&dropoff[latitude]=37.36401782609635&dropoff[longitude]=-121.92901611328125&dropoff[nickname]=1701%20Airport%20Blvd,%20San%20Jose,%20CA%2095110,%20USA&product_id=ee3ab307-e340-4406-b5ec-9f8c3b43075a&link_text=Transportation-Helper&partner_deeplink=Mooky").go(function (){
-		console.log("successful intent");
-		window.location = intent;
-	}, function (err){
-		console.log("intent fail", err);
-		if (fallback.substr(0, 4) == "http"){
-			window.open(fallback, "_system");
-		} else {
-			window.location = fallback;
-		}
-	});*/
-
-	//$("from_loc").trigger("touchstart");
-	//$("to_loc").trigger("touchstart");
-	/*
-	var intent = intent;
-	var fallback = fallback;
-	if (typeof CanOpen == "undefined"){//browser fallback
-		console.log("intent", intent, fallback);
-		alert("intent "+intent+", "+fallback);
-		return;
-	}
-	CanOpen(intent, function(isInstalled) {
-		console.log("can_open_intent", intent, fallback, isInstalled);
-		if(isInstalled) {
-			window.location = intent;
-		} else {
-			if (fallback.substr(0, 4) == "http"){
-				window.open(fallback, "_blank");
-			} else {
-				window.location = fallback;
-			}
-		}
-	});*/
 }

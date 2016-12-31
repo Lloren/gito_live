@@ -4,7 +4,6 @@ String.prototype.ucfirst = function() {
 	return this.charAt(0).toUpperCase() + this.slice(1);
 };
 
-var gaPlugin = false;
 var storage_location = "";
 var has_internet = false;
 var uuid = "comp";
@@ -123,7 +122,7 @@ function template(key, data){
 }
 
 function open_modal(options){
-	options = $.extend({}, {content: "", title: "", callback: false, button1: "Ok", button2: false, overwrite: true}, options || {});
+	options = $.extend({}, {content: "", title: "", callback: false, button1: "Ok", button2: false, overwrite: true, add_class: ""}, options || {});
 	if (options.button2 === true)
 		options.button2 = "Cancel";
 	
@@ -142,12 +141,14 @@ function open_modal(options){
 		$("#mbutton2").hide();
 	}
 	$("#modal a").off().on("touchend", function (e){
-		$("#modal").hide();
-		$("#modal-overlay").removeClass("enabled");
-		if (options.callback)
-			options.callback($(this).html());
+		if (!$(this).hasClass("no_close")){
+			$("#modal").hide();
+			$("#modal-overlay").removeClass("enabled");
+			if (options.callback)
+				options.callback($(this).html());
+		}
 	});
-	$("#modal").show();
+	$("#modal").attr("class", options.add_class).show();
 	$("#modal-overlay").addClass("enabled");
 }
 
@@ -164,13 +165,18 @@ function open_modala(text, dismiss){
 	}
 }
 
+function reopen_modal(){
+	$("#modal").show();
+	$("#modal-overlay").addClass("enabled");
+}
+
 function close_modala(){
 	$("#modal").hide().removeClass("loading");
 	$("#modal-overlay").removeClass("enabled");
 }
 
 function track(catigory, action, label, value){
-	if (GA){
+	if (typeof GA != "undefined"){
 		catigory = catigory || "Hit";
 		action = action || catigory;
 		label = label || action;
@@ -426,7 +432,7 @@ function on_ready(){
 			navigator.splashscreen.show();
 			thePlatform = device.platform.toLowerCase();
 
-			GA.startTrackerWithId(dev?"":ga_code);
+			GA.startTrackerWithId(ga_code);
 			track("Load", "load");
 
 			has_internet = navigator.connection.type != Connection.NONE;
@@ -492,7 +498,7 @@ function onLoad(){
 
 function onunload(){
 	track("Close", "close");
-	if (GA) {
+	if (typeof GA != "undefined") {
 		GA.exit(false, false);
 	}
 }
@@ -503,4 +509,11 @@ $(function () {
 	Origami.fastclick(document.body);
 	if (typeof window.cordova == "undefined")
 		on_ready();
+	
+	$(document).on("touchend", ".touch_focus", function(e){
+		$(this).focus();
+	});
+	$(document).on("touchend", ".touch_click", function(e){
+		$(this).click();
+	});
 });
