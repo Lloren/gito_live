@@ -1036,6 +1036,16 @@ function startup(){
 		$("#about").show();
 	});
 
+	click_event("#menu_rate", function (e){
+		if (thePlatform == "ios"){
+			track("Menu", "rate apple");
+			window.open("https://itunes.apple.com/us/app/apple-store/id1191203281?mt=8", '_blank');
+		} else if (thePlatform == "android"){
+			track("Menu", "rate android");
+			open_intent("market://details?id=com.mooky", "https://play.google.com/store/apps/details?id=com.mooky");
+		}
+	});
+
 	var device = device_info();
 	$(".version").html(device.version);
 	if (typeof AppVersion != "undefined"){
