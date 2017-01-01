@@ -121,8 +121,8 @@
 	</gap:config-file>
 
 	<!-- Default Icon/Splash -->
-	<icon src="icon.png" />
-	<gap:splash src="splash.png" /> <!-- ??? *Breaks iOS build/preferences sometimes ??? -->
+	<icon src="res/icon.png" />
+	<gap:splash src="res/splash.png" /> <!-- ??? *Breaks iOS build/preferences sometimes ??? -->
 
 	<icon platform="android" qualifier="ldpi" src="res/icons/android/icon-36-ldpi.png"/>
 	<icon platform="android" qualifier="mdpi" src="res/icons/android/icon-48-mdpi.png"/>
