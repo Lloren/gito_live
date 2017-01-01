@@ -561,8 +561,8 @@ function minify_rout(pow){//turned off, remove if determined to not use
 	bounds.extend(new google.maps.LatLng({lat: lat3, lng: map.getBounds().getNorthEast().lng()}));
 	map.fitBounds(bounds);
 	/*setTimeout(function (){
-		map.setZoom(map.getZoom()+1);
-	}, 1);*/
+	 map.setZoom(map.getZoom()+1);
+	 }, 1);*/
 }
 
 function full_rout(){//turned off, remove if determined to not use
