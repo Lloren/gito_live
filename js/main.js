@@ -689,8 +689,8 @@ function get_geo_location(do_load){
 					url: "images/location.svg",
 					size: new google.maps.Size(3000, 3000),
 					origin: new google.maps.Point(0, 0),
-					anchor: new google.maps.Point(11, 11),
-					scaledSize: new google.maps.Size(22, 22)
+					anchor: new google.maps.Point(25, 25),
+					scaledSize: new google.maps.Size(50, 50)
 				}
 			});
 			markers.my_loc = marker;
