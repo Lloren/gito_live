@@ -143,11 +143,14 @@ input[type="checkbox"]:checked + label span{
 #settings_tab_handle{
 	position: absolute;
 	top: -38px;
-	right: 5px;
+	/*right: 5px;*/
+	transform: translate3d(calc(100% - 40px), 0, 0);
 	transition: 200ms;
+	width: 100%;
 }
 .hidden #settings_tab_handle{
-	right: calc(100% - 45px);
+	/*right: calc(100% - 45px);*/
+	transform: translate3d(10px, 0, 0);
 }
 .hidden #settings_tab_handle img{
 	transform: rotate(-90deg);
@@ -234,11 +237,14 @@ input[type="checkbox"]:checked + label span{
 #results_tab_handle{
 	position: absolute;
 	top: -38px;
-	right: 5px;
+	/*right: 5px;*/
+	transform: translate3d(calc(100% - 40px), 0, 0);
 	transition: 200ms;
+	width: 100%;
 }
 .hidden #results_tab_handle{
-	right: calc(100% - 55px);
+	/*right: calc(100% - 55px);*/
+	transform: translate3d(20px, 0, 0);
 }
 .hidden #results_tab_handle img{
 	transform: rotate(-90deg);
@@ -281,7 +287,7 @@ input[type="checkbox"]:checked + label span{
 	background: #fff;
 }
 .result_group > .result {
-	 background: #fff8ef;
+	 background: #ffebd0;
 }
 .result > div{
 	display: inline-block;
