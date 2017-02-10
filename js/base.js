@@ -1,15 +1,37 @@
 "use strict";
 
-String.prototype.ucfirst = function() {
-	return this.charAt(0).toUpperCase() + this.slice(1);
-};
-
 var storage_location = "";
+var modala_handle = "";
 var has_internet = false;
 var uuid = "comp";
 var ad_manager = false;
 var thePlatform = "";
 var templates = {};
+
+String.prototype.ucfirst = function() {
+	return this.charAt(0).toUpperCase() + this.slice(1);
+};
+
+function Settings(save_key, def_data){
+	this.save_key = save_key || "settings_data";
+	
+	this.data = JSON.parse(window.localStorage.getItem(this.save_key) || def_data || "{}");
+	
+	this.set = function (key, val){
+		this.data[key] = val;
+		window.localStorage.setItem(this.save_key, JSON.stringify(this.data));
+	};
+	
+	this.get = function (key){
+		return this.data[key];
+	};
+
+	this.delete = function (key){
+		delete this.data[key];
+		window.localStorage.setItem(this.save_key, JSON.stringify(this.data));
+	};
+}
+window.settings = new Settings(false, '{"sort":"price","show_external_conf":true,"full_map_settings":true,"time_display":"at"}');
 
 var last_touch = {x: 0, y:0, trigger:""};
 function set_touch(e, trigger){
@@ -27,27 +49,44 @@ function good_touch(e, trigger){
 	return false;
 }
 
-function click_event(limiter, callback, target){
+function click_event(limiter, callback, target, no_prop){
 	target = target || false;
+	no_prop = no_prop || false;
 	if (target){
 		if (target === true)
 			target = document;
 		$(target).on("touchstart", limiter, function (e){
 			set_touch(e, limiter);
+			if (no_prop){
+				e.stopPropagation();
+				return false;
+			}
 		});
 		$(target).on("touchend click_event", limiter, function (e){
 			if (e.type != "click_event" && !good_touch(e, limiter))
 				return;
 			callback(e);
+			if (no_prop){
+				e.stopPropagation();
+				return false;
+			}
 		});
 	} else {
 		$(limiter).on("touchstart", function (e){
 			set_touch(e, limiter);
+			if (no_prop){
+				e.stopPropagation();
+				return false;
+			}
 		});
 		$(limiter).on("touchend click_event", function (e){
 			if (e.type != "click_event" && !good_touch(e, limiter))
 				return;
 			callback(e);
+			if (no_prop){
+				e.stopPropagation();
+				return false;
+			}
 		});
 	}
 }
@@ -128,9 +167,9 @@ function open_modal(options){
 	
 	$("#modal h1").html(options.title);
 	if (options.overwrite || !$("#modal").is(":visible")){
-		$("#modal p").html(options.content);
+		$("#modal > div").html(options.content);
 	} else {
-		$("#modal p").append("<br />"+options.content);
+		$("#modal > div").append("<br />"+options.content);
 	}
 	$("#mbutton1").html(options.button1);
 	if (options.button2){
@@ -152,11 +191,15 @@ function open_modal(options){
 	$("#modal-overlay").addClass("enabled");
 }
 
-function open_modala(text, dismiss){
+function open_modala(text, dismiss, time){
 	dismiss = dismiss || false;
+	time = time || 10000;
 	$("#modal h1").html(text);
 	$("#modal").addClass("loading").css("display", "table");
 	$("#modal-overlay").off().addClass("enabled");
+	modala_handle = setTimeout(function (){
+		close_modala();
+	}, time);
 	if (dismiss){
 		$("#disable-overlay").on("touchend", function(e){
 			$("#modal").hide();
@@ -171,6 +214,7 @@ function reopen_modal(){
 }
 
 function close_modala(){
+	clearTimeout(modala_handle);
 	$("#modal").hide().removeClass("loading");
 	$("#modal-overlay").removeClass("enabled");
 }
@@ -410,7 +454,7 @@ function app_info(){
 	if (typeof AppVersion == "undefined"){
 		var AppVersion = {version:"0.0.0", build: "1"};
 	}
-	return {name: app, version: AppVersion.version, build: AppVersion.build, phone_id: uuid, device: device_info()};
+	return {name: app, version: AppVersion.version, build: AppVersion.build, phone_id: uuid, user_id: settings.get("user_id"), device: device_info()};
 }
 
 var started = false;
@@ -472,6 +516,7 @@ function on_ready(){
 				window.localStorage.setItem("set_uuid", uuid);
 			}
 		}
+		settings.set("uuid", uuid);
 		if (typeof startup === "function")
 			startup();
 	}, 1);
@@ -506,6 +551,23 @@ function onunload(){
 $(function () {
 	if (!dev)
 		$(".dev").remove();
+
+	jQuery["postJSON"] = function( url, data, callback ) {
+		// shift arguments if data argument was omitted
+		if ( jQuery.isFunction( data ) ) {
+			callback = data;
+			data = undefined;
+		}
+
+		return jQuery.ajax({
+			url: url,
+			type: "POST",
+			dataType: "json",
+			data: data,
+			success: callback
+		});
+	};
+	
 	Origami.fastclick(document.body);
 	if (typeof window.cordova == "undefined")
 		on_ready();
