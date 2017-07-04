@@ -2,9 +2,8 @@
 			xmlns:gap		= "http://phonegap.com/ns/1.0"
 			xmlns:android	= "http://schemas.android.com/apk/res/android"
 			android-versionCode="10001"
-			id				= "com.mooky"
+			id				= "mooky.dev"
 			version			= "1.1.0">
-	<name>Mooky</name>
 	<description>
 		Search, discover, and explore your rides.
 	</description>
@@ -107,6 +106,14 @@
 	<!--<gap:plugin name="cordova-plugin-apprate" source="npm" />-->
 	<gap:plugin name="cordova-plugin-x-socialsharing" source="npm" />
 	<gap:plugin name="cordova-plugin-sim" source="npm" />
+
+	<gap:plugin name="cordova-plugin-facebook4" source="npm">
+		<param name="APP_ID" value="266665110442328" />
+		<param name="APP_NAME" value="Mooky" />
+	</gap:plugin>
+	<gap:plugin name="cordova-plugin-googleplus" source="npm">
+		<param name="REVERSED_CLIENT_ID" value="com.googleusercontent.apps.22718745656-gvbu7n3rqhsi16a5ubljd73heh3rvt4a" />
+	</gap:plugin>
 
 	<feature name="http://api.phonegap.com/1.0/network" />
 
