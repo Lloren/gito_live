@@ -28,13 +28,21 @@ var rolidex2;
 var ride_types = {"rideshare": ["lyft_line", "POOL"], "4person": ["lyft", "lyft_lux", "lyft_premier", "uberX", "SELECT", "BLACK"], "6person": ["lyft_plus", "lyft_luxsuv", "uberXL", "SUV"], "special": ["WAV", "ASSIST"]};
 
 var transit_holder = [];
-var extra_rout_holder = false;
+var extra_routs_holder = [];
 
 var results_call = 0;
 var results_to_return = 4;
 
-var recent_locations = JSON.parse(window.localStorage.getItem("recent_locations") || "[]");
-var saved_locations = JSON.parse(window.localStorage.getItem("saved_locations") || "{}");
+try{
+	var recent_locations = JSON.parse(window.localStorage.getItem("recent_locations") || "[]");
+} catch(err){
+	recent_locations = [];
+}
+try{
+	var saved_locations = JSON.parse(window.localStorage.getItem("saved_locations") || "{}");
+} catch(err){
+	recent_locations = {};
+}
 var my_locations = ["My Location", "Current Location", "Here", "Me"];
 
 //"https://play.google.com/store/apps/details?id=me.lyft.android";
@@ -169,6 +177,7 @@ function get_origin_geo(callback){
 		});
 	} else {
 		$(".from_clear").hide();
+		//start_location = false;
 		callback(false, true);
 	}
 }
@@ -193,6 +202,7 @@ function get_destination_geo(callback){
 		});
 	} else {
 		$(".to_clear").hide();
+		//stop_location = false;
 		callback(false);
 	}
 }
@@ -305,7 +315,7 @@ function google_rout(call_num, start, stop){
 		} else {
 			bounds.extend(start);
 			bounds.extend(stop);
-			open_modal({title: "error", content:"No driving rout between locations."});
+			open_modal({title: "error", content:"No driving route between locations."});
 		}
 		map.panTo(bounds.getCenter());
 		google.maps.event.addListenerOnce(map, "idle", function() {
@@ -314,10 +324,15 @@ function google_rout(call_num, start, stop){
 		full_bounds = bounds;
 	});
 	if (settings.get("extra_rout")){
-		var icon = '<img src="images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg">';
-		if (settings.get("extra_rout") == "BICYCLING")
-			icon = '<img src="images/icons3/CUSTOM%20BICYCLE%20ICON.RO.v4.svg">';
-		additional_google_rout(call_num, start, stop, settings.get("extra_rout"), icon);
+		if (settings.get("extra_rout") == "BOTH"){
+			additional_google_rout(call_num, start, stop, "BICYCLING", '<img src="images/icons3/CUSTOM%20BICYCLE%20ICON.RO.v4.svg">');
+			additional_google_rout(call_num, start, stop, "WALKING", '<img src="images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg">');
+		} else {
+			var icon = '<img src="images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg">';
+			if (settings.get("extra_rout") == "BICYCLING")
+				icon = '<img src="images/icons3/CUSTOM%20BICYCLE%20ICON.RO.v4.svg">';
+			additional_google_rout(call_num, start, stop, settings.get("extra_rout"), icon);
+		}
 	} else if (google.maps.geometry.spherical.computeDistanceBetween(new google.maps.LatLng(start_location), new google.maps.LatLng(stop_location)) < 1000){
 		additional_google_rout(call_num, start, stop, "WALKING", '<img src="images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg">');
 	}
@@ -334,16 +349,20 @@ function additional_google_rout(call_num, start, stop, mode, icon){
 			var obj = {
 				icon:icon,
 				name:mode.toLowerCase().ucfirst(),
-				price:" ---",
+				price:0,
 				time:"N/A",
+				spri:1,
 				extra_info: true
 			};
-			if (obj.name == "Bicycling")
+			if (obj.name == "Bicycling"){
+				obj.spri = 2;
 				obj.bike = true;
+			}
 			for (var i=0;i<response.routes.length;i++){
 				var route = response.routes[0];
-				extra_rout_holder = route.legs[0];
+				extra_routs_holder[obj.bike?"bike":"walk"] = route.legs[0];
 				obj.time_sec = route.legs[0].duration.value;
+				console.log("added_roupt time", obj.time_sec);
 				var path = new google.maps.Polyline({
 					path:route.overview_path,
 					geodesic:true,
@@ -369,7 +388,7 @@ function additional_google_rout(call_num, start, stop, mode, icon){
 			map.fitBounds(bounds);
 		});
 		full_bounds = bounds;
-		returned_results(results, "Walking");
+		returned_results(results, obj.name);
 	});
 }
 
@@ -384,7 +403,7 @@ function service_uber(call_num, start, stop){
 			if (options !== true && options.indexOf(price.display_name) == -1){
 				continue;
 			}
-			var obj = {app: "uber", icon: '<img src="images/uber_'+price.localized_display_name.toLowerCase().replace(" ", "_")+'.svg" onError="this.onerror=null;this.src='+"'images/uber_logo.svg'"+';">', name: price.localized_display_name, price_multiply: price.surge_multiplier, time_sec: price.time_estimate, ride_type:get_ride_type(price.display_name)};
+			var obj = {app: "uber", icon: '<img src="images/uber_'+price.localized_display_name.toLowerCase().replace(/ /g, "_")+'.svg" onError="this.onerror=null;this.src='+"'images/uber_logo.svg'"+';">', name: price.localized_display_name, price_multiply: price.surge_multiplier, time_sec: price.time_estimate, ride_type:get_ride_type(price.display_name)};
 			var arrival = new Date();
 			arrival.setSeconds(arrival.getSeconds()+parseInt(price.time_estimate)+parseInt(price.duration));
 			obj.arr_time = arrival;
@@ -471,7 +490,7 @@ function process_lyft(call_data){
 			}
 
 			var surge_multi = est.primetime_percentage.substr(0, est.primetime_percentage.length-1)/100 + 1;
-			var obj = {app: "lyft", icon: '<img src="images/lyft_'+est.display_name.toLowerCase().replace(" ", "_")+'.svg" onError="this.onerror=null;this.src='+"'images/lyft_logo.svg'"+';">', name: est.display_name, time_sec: etas[est.ride_type]?etas[est.ride_type]:"N/A", price_multiply: surge_multi, ride_type:get_ride_type(est.ride_type)};
+			var obj = {app: "lyft", icon: '<img src="images/lyft_'+est.display_name.toLowerCase().replace(/ /g, "_")+'.svg" onError="this.onerror=null;this.src='+"'images/lyft_logo.svg'"+';">', name: est.display_name, time_sec: etas[est.ride_type]?etas[est.ride_type]:"N/A", price_multiply: surge_multi, ride_type:get_ride_type(est.ride_type)};
 			if (etas[est.ride_type]){
 				var arrival = new Date();
 				arrival.setSeconds(arrival.getSeconds()+etas[est.ride_type]+est.estimated_duration_seconds);
@@ -573,6 +592,10 @@ function format_results(results){
 	for (var i=0;i<results.length;i++){
 		var result = results[i];
 		if (settings.get("time_display") == "at"){//TODO: make a display setting
+			if (result.time_sec && !result.arr_time){
+				result.arr_time = new Date();
+				result.arr_time.setSeconds(result.arr_time.getTime() + result.time_sec);
+			}
 			if (result.arr_time){
 				var hour = result.arr_time.getHours();
 				var period = "am";
@@ -632,6 +655,11 @@ function sort_results(){
 	});
 
 	var result = $("#results > .result, #results > .result_group").sort(function (a, b){
+		if ($(a).data("spri") || $(b).data("spri")){
+			var a1 = $(a).data("spri") || 999999;
+			var b1 = $(b).data("spri") || 999999;
+			return a1 - b1;
+		}
 		return $(a).data(sorter) - $(b).data(sorter);
 	});
 	$("#results").append(result);
@@ -700,7 +728,7 @@ function coded_location(pos, start, trigger){
 		if (markers.stop){
 			markers.stop.setPosition(stop_location);
 			if ($("#to_loc").val() == ""){
-				geo_location("#to_loc", start_location);
+				geo_location("#to_loc", stop_location);
 				if (start_location){
 					run_services();
 				}
@@ -741,7 +769,7 @@ function run_services(){
 	console.log("run_services", run_handel);
 	if (!run_handel){
 		run_handel = setTimeout(function (){
-			extra_rout_holder = false;
+			extra_routs_holder = [];
 			console.log("runing_services", start_location, stop_location);
 			if (start_location.lat == stop_location.lat && start_location.lng == stop_location.lng){
 				open_modal({title: "Error", content:"Your origin and destination can not be the same location."});
@@ -761,15 +789,34 @@ function run_services(){
 					results_to_return = 4;
 
 					var services = JSON.parse(settings.get("search_services"));
+					var count = 4;
 
-					if (services === true || services.indexOf("transit") != -1)
+					if (services === true){
 						service_google(results_call, start_location, stop_location);
-					if (services === true || services.indexOf("uber") != -1)
 						service_uber(results_call, start_location, stop_location);
-					if (services === true || services.indexOf("taxi") != -1)
 						service_tff(results_call, start_location, stop_location);
-					if (services === true || services.indexOf("lyft") != -1)
 						service_lyft(results_call, start_location, stop_location);
+					} else {
+						if (services.indexOf("transit") != -1){
+							--count;
+							service_google(results_call, start_location, stop_location);
+						}
+						if (services.indexOf("uber") != -1){
+							--count;
+							service_uber(results_call, start_location, stop_location);
+						}
+						if (services.indexOf("taxi") != -1){
+							--count;
+							service_tff(results_call, start_location, stop_location);
+						}
+						if (services.indexOf("lyft") != -1){
+							--count;
+							service_lyft(results_call, start_location, stop_location);
+						}
+					}
+					if (count == 0){
+						settings.set("search_services", "true");
+					}
 					google_rout(results_call, start_location, stop_location);
 				} else {
 					open_modal({title: "Error", content:"You need to enter a from and to location."});
@@ -1127,6 +1174,19 @@ function get_ride_filters(){
 	return options;
 }
 
+function load_vid_page(){
+	var vid = document.getElementById("vid");
+	vid.currentTime = 0;
+	vid.play();
+	$("#vid").on("ended", function (){
+		$(".page").hide();
+		$("#map").show();
+	});
+
+	$(".page").hide();
+	$("#walkthough_vid").show();
+}
+
 function startup(){
 	console.log("startup");
 	if (!dev)
@@ -1369,17 +1429,19 @@ function startup(){
 	}, true);
 
 	click_event(".extra_info", function (e){
-		console.log("trasit info", extra_rout_holder);
+		console.log("trasit info", extra_routs_holder);
 		var is_bike = $(e.currentTarget).hasClass("bike");
+		var holder = extra_routs_holder[is_bike?"bike":"walk"];
 
 		var steps_html = [];
-		for (var i=0;i<extra_rout_holder.steps.length;i++){
-			var step = extra_rout_holder.steps[i];
+		for (var i=0;i<holder.steps.length;i++){
+			var step = holder.steps[i];
 			var temp = {num: i+1, time: ""};
 			temp.time = step.duration.text;
 			temp.icon = "images/icons3/CUSTOM%20WALKING%20ICON.RO.v3.svg";
-			if (is_bike)
+			if (is_bike){
 				temp.icon = "images/icons3/CUSTOM%20BICYCLE%20ICON.RO.v4.svg";
+			}
 			temp.action = step.instructions.replace(/<\/?[^>]+(>|$)/g, " ").replace(/  /g, " ").replace(/will be on the/g, "on");
 			steps_html.push(template("transit_step", temp));
 		}
@@ -1603,8 +1665,12 @@ function startup(){
 			if (key){
 				if ($(this).hasClass("settings_toggler")){
 					var toggles = JSON.parse(settings.get(key));
-					for (var i=0;i<toggles.length;i++){
-						var opt = $(this).find("[data-key='"+toggles[i]+"']").addClass("active");
+					if (toggles === true){
+						$(this).find(".option_toggle").addClass("active")
+					} else {
+						for (var i=0;i<toggles.length;i++){
+							var opt = $(this).find("[data-key='"+toggles[i]+"']").addClass("active");
+						}
 					}
 				} else {
 						var opt = $(this).find("[data-key='"+settings.get(key)+"']");
@@ -1732,17 +1798,11 @@ function startup(){
 			}
 		}});
 	}, true);
-	
-	click_event("#menu_pp", function (e){
-		$("#menu-overlay").trigger("click_event");
-		$(".page").hide();
-		$("#pp").show();
-	});
 
-	click_event("#menu_toc", function (e){
+	click_event("#menu_toc_pp", function (e){
 		$("#menu-overlay").trigger("click_event");
 		$(".page").hide();
-		$("#toc").show();
+		$("#toc_pp").show();
 	});
 
 	click_event("#menu_about", function (e){
@@ -1803,6 +1863,12 @@ function startup(){
 		$("#menu-overlay").trigger("click_event");
 		$(".page").hide();
 		$("#login").show();
+	});
+
+	click_event("#menu_walkthough", function (e){
+		$("#menu-overlay").trigger("click_event");
+
+		load_vid_page();
 	});
 	
 	click_event("#login_do", function (){
@@ -1900,6 +1966,7 @@ function startup(){
 					google.maps.event.trigger(map, "resize");
 					if (my_loc)
 						map.setCenter(my_loc);
+					load_vid_page();
 				}
 			}
 		});
@@ -1960,6 +2027,10 @@ function startup(){
 	click_event("#menu_share", function (e){
 		$("#menu-overlay").trigger("click_event");
 		open_share();
+	});
+
+	click_event("#pop_overlay", function (e){
+		$("#mask_overlay").toggle();
 	});
 
 	if (settings.get("user_id") > 0){
