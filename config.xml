@@ -107,7 +107,7 @@
 	<gap:plugin name="cordova-plugin-x-socialsharing" source="npm" />
 	<gap:plugin name="cordova-plugin-sim" source="npm" />
 
-	<gap:plugin name="cordova-plugin-facebook4" source="npm">
+	<gap:plugin name="cordova-plugin-facebook4" source="npm" spec="1.7.4">
 		<param name="APP_ID" value="266665110442328" />
 		<param name="APP_NAME" value="Mooky" />
 	</gap:plugin>
