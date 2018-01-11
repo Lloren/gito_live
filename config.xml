@@ -3,7 +3,7 @@
 			xmlns:android	= "http://schemas.android.com/apk/res/android"
 			android-versionCode="10003"
 			id				= "com.mooky"
-			version			= "1.2.1">
+			version			= "1.2.2">
 	<description>
 		Search, discover, and explore your rides.
 	</description>
@@ -56,6 +56,12 @@
 				<string>mailto</string>
 			</array>
 		</gap:config-file>
+		<!--<gap:config-file target="*-Info.plist" parent="NSLocationWhenInUseUsageDescription">
+			<string>Your location will be used to accurately determine travel times and pickup location.</string>
+		</gap:config-file>
+		<gap:config-file target="*-Info.plist" parent="NSLocationUsageDescription">
+			<string>Your location will be used to accurately determine travel times and pickup location.</string>
+		</gap:config-file>-->
 	</gap:platform>
 
 	<preference name="fullscreen" value="false" />

@@ -647,7 +647,6 @@ function format_results(results){
 }
 
 function sort_results(){
-	console.log("sorting");
 	var sorter = settings.get("sort");
 
 	$(".sub_results").each(function (){
@@ -1162,9 +1161,6 @@ function login_responce(data){
 			if (data.credentials){
 				credentials = data.credentials;
 				$("head").append('<script src="https://maps.googleapis.com/maps/api/js?libraries=geometry,places&v=3.exp&key='+credentials.google_maps+'"></script>');
-				while(!google){
-
-				}
 				var int = setInterval(function (){
 					if (typeof google != "undefined"){
 						clearInterval(int);
@@ -2078,6 +2074,9 @@ function startup(){
 		}});
 	});
 
+	rolidex = new Rolidex();
+	rolidex2 = new Rolidex2();
+
 	if (settings.get("user_id") > 0){
 		$.getJSON(base_url+"/ajax/settings.php", {action:"credentials", uuid: settings.get("uuid"), user_id: settings.get("user_id")}, function (data){
 			if (data.credentials){
@@ -2102,17 +2101,14 @@ function startup(){
 				settings.save(true);
 			}
 		});
-	}
-
-	rolidex = new Rolidex();
-	rolidex2 = new Rolidex2();
-
-	if (settings.get("user_id") > 0){
 		$(".logged_in").show();
 		$(".logged_out").hide();
 	} else {
 		$(".logged_in").hide();
 		$(".logged_out").show();
+		$(".page").hide();
+		$("#login").show();
+		start_splash_remove();
 	}
 
 	if (typeof AppVersion != "undefined"){
@@ -2242,6 +2238,7 @@ function Rolidex(){
 	});
 	
 	this.set_spacing = function(){
+		console.log("set_spacing relidex");
 		var items = $(this.sub_div+":visible");
 		var total_height = items.length * this.height;
 		this.main_div.css("height", total_height);
@@ -2301,6 +2298,7 @@ function Rolidex(){
 			}
 			curr_pos += scope.height;
 		});
+		console.log("complete_spacing relidex");
 	}
 }
 
@@ -2334,6 +2332,7 @@ function Rolidex2(){
 	});
 
 	this.set_spacing = function(){
+		console.log("set_spacing relidex2");
 		var items = $(this.sub_div);
 		var total_height = items.length * this.height;
 		this.main_div.css("height", total_height);
@@ -2396,5 +2395,6 @@ function Rolidex2(){
 			}
 			curr_pos += scope.height;
 		});
+		console.log("complete_spacing relidex2");
 	}
 }
