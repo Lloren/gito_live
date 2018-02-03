@@ -3,7 +3,7 @@
 			xmlns:android	= "http://schemas.android.com/apk/res/android"
 			android-versionCode="10003"
 			id				= "com.mooky"
-			version			= "1.2.3">
+			version			= "1.2.4">
 	<description>
 		Search, discover, and explore your rides.
 	</description>
