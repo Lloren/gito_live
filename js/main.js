@@ -2218,16 +2218,18 @@ function Rolidex(){
 	this.range = 30;
 	this.range_size = 3 * this.height;
 	this.touch_start = false;
+	this.touch_start_y = 0;
 	
 	this.main_div = $("#results");
 	this.sub_div = ".result";
 	
 	this.main_div.on("touchstart", function (e){
 		scope.touch_start = e.originalEvent.touches[0];
+		scope.touch_start_y = scope.touch_start.clientY;
 	});
 	this.main_div.on("touchmove", function (e){
 		if (scope.touch_start){
-			var delt = e.originalEvent.touches[0].clientY - scope.touch_start.clientY;
+			var delt = e.originalEvent.touches[0].clientY - scope.touch_start_y;
 			scope.pos = scope.last_pos - delt;
 			scope.set_spacing();
 		}
@@ -2312,21 +2314,26 @@ function Rolidex2(){
 	this.range = 30;
 	this.range_size = 2 * this.height;
 	this.touch_start = false;
+	this.touch_start_y = 0;
 
 	this.main_div = $("#map_settings");
 	this.sub_div = ".toggler:visible, .options>.option:visible, .options>.option_toggle:visible";
 
 	this.main_div.on("touchstart", function (e){
 		scope.touch_start = e.originalEvent.touches[0];
+		scope.touch_start_y = scope.touch_start.clientY;
+		console.log("start relidex2", scope.touch_start);
 	});
 	this.main_div.on("touchmove", function (e){
 		if (scope.touch_start){
-			var delt = e.originalEvent.touches[0].clientY - scope.touch_start.clientY;
+			var delt = e.originalEvent.touches[0].clientY - scope.touch_start_y;
+			console.log("move relidex2", delt, scope.touch_start_y, e.originalEvent.touches[0].clientY, scope.touch_start.clientY);
 			scope.pos = scope.last_pos - delt;
 			scope.set_spacing();
 		}
 	});
 	this.main_div.on("touchend", function (e){
+		console.log("stop relidex2");
 		scope.touch_start = false;
 		scope.last_pos = scope.pos;
 	});
@@ -2343,7 +2350,7 @@ function Rolidex2(){
 
 		var prev_group_z = false;
 
-		//console.log(this.pos, cont_height, items.length, scroll_height);
+		console.log(this.last_pos, this.pos, cont_height, items.length, scroll_height);
 
 		if (this.pos > scroll_height)
 			this.pos = scroll_height;
@@ -2379,7 +2386,7 @@ function Rolidex2(){
 			if (npos > cont_height - scope.height)
 				npos = cont_height - scope.height;
 			a++;
-			//console.log(npos, mod_top);
+			console.log(npos, z, mod_top);
 			if (mod_top == -1){
 				if (parent.hasClass("para_scroll")){
 					z -= 2;
